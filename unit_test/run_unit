@@ -1,0 +1,75 @@
+#!/bin/bash
+
+debug_on="";
+if [ "$2" != "" ]
+then
+	debug_on="-DUT_DEBUG"
+fi
+
+if [ -r "$1" ]
+then
+	test_file="$1";
+else
+	echo "file $1 no exist";
+	exit 0;
+fi
+
+echo ""
+echo "####################  T e s t  E n v  ####################";
+dep_file=`grep //#DEP_FILE: $test_file | cut -d: -f2`;
+cmp_flag=`grep //#CMP_FLAG: $test_file | cut -d: -f2`;
+dep_obj=${dep_file//.c/.o};
+test_obj=${test_file//.c/.o};
+output=${test_file//.c/};
+inc_dir=`which run_unit`;
+inc_dir=${inc_dir%run_unit};
+cmp_flag="$cmp_flag -I$inc_dir";
+echo "DEP_FILE: $dep_file";
+echo "CMP_FLAG: $cmp_flag";
+
+#start cmp
+echo ""
+echo "###############  C o m p i l e  F i l e s  ###############";
+for file in $dep_file
+do
+	if [ -r "$file" ]
+	then
+		echo "#start cmp $file";
+		gcc -c $file $cmp_flag -I$inc_dir;
+	else
+		echo "#failed cmp $file, no find";
+		exit 0;
+	fi
+done
+
+echo "#start cmp $test_file";
+gcc -c -DUNIT_TEST $debug_on -e testmain -nostartfiles $cmp_flag -I$inc_dir $test_file;
+
+echo "$dep_obj $test_obj > $output";
+gcc -o $output -e testmain -nostartfiles $cmp_flag $debug_on $test_obj $dep_obj;
+
+#del all *.o
+/bin/rm -rf $test_obj;
+for file in $dep_obj
+do
+	if [ -r "$file" ]
+	then
+		/bin/rm -rf $file;
+	fi
+done
+
+#start run
+echo ""
+echo "#################  R u n  T e s t i n g  #################";
+echo "#start run test";
+echo ""
+
+if [ -r "./$output" ]
+then
+	./$output;
+	/bin/rm -rf ./$output;
+fi
+
+echo ""
+echo "#####################  F i n i s h  ######################";
+
