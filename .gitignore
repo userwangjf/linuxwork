@@ -1,0 +1,7 @@
+selftest/*.out
+selftest/*.bin
+genromfs
+genromfs.o
+
+build/
+*.o
